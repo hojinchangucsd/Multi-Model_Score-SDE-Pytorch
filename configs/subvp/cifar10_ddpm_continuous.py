@@ -18,6 +18,7 @@
 
 from configs.default_cifar10_configs import get_default_configs
 
+# 134MB
 
 def get_config():
   config = get_default_configs()

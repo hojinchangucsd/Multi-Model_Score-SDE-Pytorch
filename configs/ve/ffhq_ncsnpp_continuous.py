@@ -19,6 +19,8 @@
 import ml_collections
 import torch
 
+# 404MB
+
 def get_config():
   config = ml_collections.ConfigDict()
   # training

@@ -18,6 +18,7 @@
 
 from configs.default_celeba_configs import get_default_configs
 
+# 240MB
 
 def get_config():
   config = get_default_configs()

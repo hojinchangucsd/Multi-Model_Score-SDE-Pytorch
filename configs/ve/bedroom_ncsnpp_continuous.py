@@ -18,6 +18,7 @@
 
 from configs.default_lsun_configs import get_default_configs
 
+# 250MB
 
 def get_config():
   config = get_default_configs()

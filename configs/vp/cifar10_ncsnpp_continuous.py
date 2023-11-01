@@ -17,6 +17,7 @@
 """Training NCSN++ on CIFAR-10 with VP SDE."""
 from configs.default_cifar10_configs import get_default_configs
 
+# 239MB
 
 def get_config():
   config = get_default_configs()

@@ -63,6 +63,14 @@ def train(config, workdir):
 
   # Initialize model.
   score_model = mutils.create_model(config)
+  # def get_model_size(): 
+  #   s = 0
+  #   for p in score_model.parameters(): 
+  #     s += p.nelement() * p.element_size()
+  #   for b in score_model.buffers(): 
+  #     s += b.nelement() * b.element_size()
+  #   return s / 1024 **2
+  # print(f'Model Size: {get_model_size():.2f}MB')
   ema = ExponentialMovingAverage(score_model.parameters(), decay=config.model.ema_rate)
   optimizer = losses.get_optimizer(config, score_model.parameters())
   state = dict(optimizer=optimizer, model=score_model, ema=ema, step=0)
