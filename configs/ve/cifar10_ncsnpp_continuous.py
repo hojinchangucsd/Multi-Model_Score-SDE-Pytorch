@@ -25,6 +25,7 @@ def get_config():
   training = config.training
   training.sde = 'vesde'
   training.continuous = True
+  training.batch_size = 2
 
   # sampling
   sampling = config.sampling

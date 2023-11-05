@@ -1,0 +1,13 @@
+WARNING - utils.py - 2023-11-04 19:42:54,196 - No checkpoint found at ./exp/first_test/workdir/checkpoints-meta/checkpoint.pth. Returned the same state as input
+INFO - xla_bridge.py - 2023-11-04 19:42:54,296 - Unable to initialize backend 'rocm': NOT_FOUND: Could not find registered platform with name: "rocm". Available platform names are: CUDA Interpreter
+INFO - xla_bridge.py - 2023-11-04 19:42:54,296 - Unable to initialize backend 'tpu': module 'jaxlib.xla_extension' has no attribute 'get_tpu_client'
+INFO - dataset_info.py - 2023-11-04 19:42:54,308 - Load dataset info from /home/srip23/tensorflow_datasets/cifar10/3.0.2
+WARNING - options.py - 2023-11-04 19:42:54,310 - options.experimental_threading is deprecated. Use options.threading instead.
+WARNING - options.py - 2023-11-04 19:42:54,310 - options.experimental_threading is deprecated. Use options.threading instead.
+INFO - dataset_builder.py - 2023-11-04 19:42:54,310 - Reusing dataset cifar10 (/home/srip23/tensorflow_datasets/cifar10/3.0.2)
+INFO - logging_logger.py - 2023-11-04 19:42:55,502 - Constructing tf.data.Dataset cifar10 for split train, from /home/srip23/tensorflow_datasets/cifar10/3.0.2
+WARNING - options.py - 2023-11-04 19:42:55,583 - options.experimental_threading is deprecated. Use options.threading instead.
+WARNING - options.py - 2023-11-04 19:42:55,583 - options.experimental_threading is deprecated. Use options.threading instead.
+INFO - dataset_builder.py - 2023-11-04 19:42:55,583 - Reusing dataset cifar10 (/home/srip23/tensorflow_datasets/cifar10/3.0.2)
+INFO - logging_logger.py - 2023-11-04 19:42:55,601 - Constructing tf.data.Dataset cifar10 for split test, from /home/srip23/tensorflow_datasets/cifar10/3.0.2
+INFO - run_lib.py - 2023-11-04 19:42:55,685 - Starting training loop at step 0.
