@@ -21,6 +21,9 @@ import io
 import os
 import time
 
+import re
+import sys
+
 import numpy as np
 import tensorflow as tf
 import tensorflow_gan as tfgan
@@ -72,8 +75,12 @@ def train(config, workdir):
   #   #for b in score_model.buffers(): 
   #   #  s += b.nelement()
   #   return s
-  # print(f'Model Size: {get_model_size()}')
-  # print(score_model)
+  # config_name = sys.argv[1]
+  # model_name = re.findall(r'\./configs/(.*)\.py', config_name)[0].replace('/', '--')
+  # model_info_file = open(f'./ModelInfo/{model_name}.txt', 'w')
+  # model_info_file.write(f'Model Size: {get_model_size()}\n')
+  # model_info_file.write(str(score_model))
+  # model_info_file.close()
   # quit()
   
   ema = ExponentialMovingAverage(score_model.parameters(), decay=config.model.ema_rate)
