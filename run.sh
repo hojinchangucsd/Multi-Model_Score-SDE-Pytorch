@@ -1,7 +1,7 @@
 #!/bin/bash
 
 python main.py \
-    --config=./configs/ve/cifar10_ncsnpp_continuous.py \
-    --workdir=./exp/first_test/workdir/ \
-    --mode=train \
-    --eval_folder=./exp/first_test/eval_folder/
+                --config=./configs/ve/debug_cifar10_ncsnpp_continuous.py \
+                --eval_folder=eval_folder \
+                --mode=eval \
+                --workdir=./exp/debug/workdir/ 

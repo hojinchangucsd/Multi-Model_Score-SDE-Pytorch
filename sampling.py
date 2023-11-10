@@ -405,6 +405,7 @@ def get_pc_sampler(sde, shape, predictor, corrector, inverse_scaler, snr,
         vec_t = torch.ones(shape[0], device=t.device) * t
         x, x_mean = corrector_update_fn(x, vec_t, model=model)
         x, x_mean = predictor_update_fn(x, vec_t, model=model)
+        print(f'Sampling step {i:04d} out of {sde.N}', flush=True, end='\r')
 
       return inverse_scaler(x_mean if denoise else x), sde.N * (n_steps + 1)
 

@@ -12,6 +12,10 @@ events.*
 # VScode
 .vscode/
 
+# exp folders
+exp/debug
+exp/first_test
+
 # Python egg metadata, regenerated from source files by setuptools.
 /*.egg-info
 .eggs/
