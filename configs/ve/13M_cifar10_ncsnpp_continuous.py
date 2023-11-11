@@ -7,10 +7,10 @@ def get_config():
   training = config.training
   training.sde = 'vesde'
   training.continuous = True
-  training.n_iters = 130001
-  training.snapshot_freq = 10000
+  training.n_iters = 1300001
+  training.snapshot_freq = 50000
   training.snapshot_sampling = False
-  training.eval_freq = 10000
+  training.eval_freq = 5000
 
   # sampling
   sampling = config.sampling
@@ -20,8 +20,8 @@ def get_config():
 
   # evaluation
   evaluate = config.eval
-  evaluate.begin_ckpt = 56
-  evaluate.end_ckpt = 56
+  evaluate.begin_ckpt = 0
+  evaluate.end_ckpt = 0
   evaluate.enable_sampling = True
   evaluate.enable_loss = False
   evaluate.num_samples = 1024

@@ -1,0 +1,57 @@
+2023-11-10 21:21:44.150019: I tensorflow/core/util/port.cc:110] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2023-11-10 21:21:44.185549: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE4.1 SSE4.2 AVX AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2023-11-10 21:21:54.155754: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1639] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 46200 MB memory:  -> device: 0, name: NVIDIA RTX A6000, pci bus id: 0000:17:00.0, compute capability: 8.6
+2023-11-10 21:21:54.156364: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1639] Created device /job:localhost/replica:0/task:0/device:GPU:1 with 46200 MB memory:  -> device: 1, name: NVIDIA RTX A6000, pci bus id: 0000:65:00.0, compute capability: 8.6
+W1110 21:21:54.594038 140264174335808 utils.py:10] No checkpoint found at ./exp/13M/workdir/checkpoints-meta/checkpoint.pth. Returned the same state as input
+I1110 21:21:54.610749 140264174335808 xla_bridge.py:627] Unable to initialize backend 'rocm': NOT_FOUND: Could not find registered platform with name: "rocm". Available platform names are: Interpreter CUDA
+I1110 21:21:54.611630 140264174335808 xla_bridge.py:627] Unable to initialize backend 'tpu': module 'jaxlib.xla_extension' has no attribute 'get_tpu_client'
+I1110 21:21:54.629448 140264174335808 dataset_info.py:565] Load dataset info from /home/mmorafah@AD.UCSD.EDU/tensorflow_datasets/cifar10/3.0.2
+W1110 21:21:54.636364 140264174335808 options.py:619] options.experimental_threading is deprecated. Use options.threading instead.
+W1110 21:21:54.636518 140264174335808 options.py:619] options.experimental_threading is deprecated. Use options.threading instead.
+I1110 21:21:54.636720 140264174335808 dataset_builder.py:522] Reusing dataset cifar10 (/home/mmorafah@AD.UCSD.EDU/tensorflow_datasets/cifar10/3.0.2)
+I1110 21:21:54.736062 140264174335808 logging_logger.py:49] Constructing tf.data.Dataset cifar10 for split train, from /home/mmorafah@AD.UCSD.EDU/tensorflow_datasets/cifar10/3.0.2
+W1110 21:21:54.852758 140264174335808 options.py:619] options.experimental_threading is deprecated. Use options.threading instead.
+W1110 21:21:54.852953 140264174335808 options.py:619] options.experimental_threading is deprecated. Use options.threading instead.
+I1110 21:21:54.853152 140264174335808 dataset_builder.py:522] Reusing dataset cifar10 (/home/mmorafah@AD.UCSD.EDU/tensorflow_datasets/cifar10/3.0.2)
+I1110 21:21:54.878226 140264174335808 logging_logger.py:49] Constructing tf.data.Dataset cifar10 for split test, from /home/mmorafah@AD.UCSD.EDU/tensorflow_datasets/cifar10/3.0.2
+I1110 21:21:54.971148 140264174335808 run_lib.py:143] Starting training loop at step 0.
+I1110 21:21:58.140448 140264174335808 run_lib.py:153] step: 0, training_loss: 1.53538e+03
+I1110 21:21:58.508189 140264174335808 run_lib.py:166] step: 0, eval_loss: 1.53645e+03
+I1110 21:22:09.633087 140264174335808 run_lib.py:153] step: 50, training_loss: 1.52422e+03
+I1110 21:22:20.979320 140264174335808 run_lib.py:153] step: 100, training_loss: 1.49058e+03
+I1110 21:22:32.162091 140264174335808 run_lib.py:153] step: 150, training_loss: 1.41803e+03
+I1110 21:22:42.939542 140264174335808 run_lib.py:153] step: 200, training_loss: 1.30498e+03
+I1110 21:22:53.984758 140264174335808 run_lib.py:153] step: 250, training_loss: 1.16326e+03
+I1110 21:23:05.240667 140264174335808 run_lib.py:153] step: 300, training_loss: 1.00344e+03
+I1110 21:23:15.543745 140264174335808 run_lib.py:153] step: 350, training_loss: 8.31943e+02
+I1110 21:23:25.766623 140264174335808 run_lib.py:153] step: 400, training_loss: 6.59687e+02
+I1110 21:23:35.948785 140264174335808 run_lib.py:153] step: 450, training_loss: 5.12063e+02
+I1110 21:23:46.604139 140264174335808 run_lib.py:153] step: 500, training_loss: 3.55917e+02
+I1110 21:23:56.315511 140264174335808 run_lib.py:153] step: 550, training_loss: 2.83000e+02
+I1110 21:24:06.605455 140264174335808 run_lib.py:153] step: 600, training_loss: 1.91582e+02
+I1110 21:24:16.493193 140264174335808 run_lib.py:153] step: 650, training_loss: 2.19130e+02
+I1110 21:24:27.564918 140264174335808 run_lib.py:153] step: 700, training_loss: 1.76569e+02
+I1110 21:24:37.859774 140264174335808 run_lib.py:153] step: 750, training_loss: 2.02817e+02
+I1110 21:24:48.100334 140264174335808 run_lib.py:153] step: 800, training_loss: 1.98693e+02
+I1110 21:24:58.070737 140264174335808 run_lib.py:153] step: 850, training_loss: 1.47167e+02
+I1110 21:25:08.259615 140264174335808 run_lib.py:153] step: 900, training_loss: 1.70280e+02
+I1110 21:25:18.576384 140264174335808 run_lib.py:153] step: 950, training_loss: 1.61517e+02
+I1110 21:25:28.909631 140264174335808 run_lib.py:153] step: 1000, training_loss: 1.72809e+02
+I1110 21:25:39.420182 140264174335808 run_lib.py:153] step: 1050, training_loss: 1.68085e+02
+I1110 21:25:49.700153 140264174335808 run_lib.py:153] step: 1100, training_loss: 1.82671e+02
+I1110 21:26:00.390397 140264174335808 run_lib.py:153] step: 1150, training_loss: 1.87250e+02
+I1110 21:26:10.665623 140264174335808 run_lib.py:153] step: 1200, training_loss: 1.70932e+02
+I1110 21:26:20.805952 140264174335808 run_lib.py:153] step: 1250, training_loss: 1.50187e+02
+I1110 21:26:30.994420 140264174335808 run_lib.py:153] step: 1300, training_loss: 1.39773e+02
+I1110 21:26:41.445579 140264174335808 run_lib.py:153] step: 1350, training_loss: 1.82645e+02
+I1110 21:26:51.867614 140264174335808 run_lib.py:153] step: 1400, training_loss: 1.63038e+02
+I1110 21:27:02.420334 140264174335808 run_lib.py:153] step: 1450, training_loss: 1.43309e+02
+I1110 21:27:12.769358 140264174335808 run_lib.py:153] step: 1500, training_loss: 1.27181e+02
+I1110 21:27:22.875218 140264174335808 run_lib.py:153] step: 1550, training_loss: 1.58273e+02
+I1110 21:27:33.145372 140264174335808 run_lib.py:153] step: 1600, training_loss: 1.39434e+02
+I1110 21:27:43.505157 140264174335808 run_lib.py:153] step: 1650, training_loss: 1.57131e+02
+I1110 21:27:54.224553 140264174335808 run_lib.py:153] step: 1700, training_loss: 1.93423e+02
+I1110 21:28:04.284026 140264174335808 run_lib.py:153] step: 1750, training_loss: 1.69390e+02
+I1110 21:28:14.167537 140264174335808 run_lib.py:153] step: 1800, training_loss: 1.35143e+02
+I1110 21:28:24.087380 140264174335808 run_lib.py:153] step: 1850, training_loss: 1.65513e+02

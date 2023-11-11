@@ -16,6 +16,9 @@ events.*
 exp/debug
 exp/first_test
 
+# Giant pth files
+*.pth
+
 # Python egg metadata, regenerated from source files by setuptools.
 /*.egg-info
 .eggs/
