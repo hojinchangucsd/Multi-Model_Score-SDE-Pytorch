@@ -1,6 +1,5 @@
 from configs.default_cifar10_configs import get_default_configs
 
-
 def get_config():
   config = get_default_configs()
   # training
@@ -20,8 +19,8 @@ def get_config():
 
   # evaluation
   evaluate = config.eval
-  evaluate.begin_ckpt = 0
-  evaluate.end_ckpt = 0
+  evaluate.begin_ckpt = 16
+  evaluate.end_ckpt = 16
   evaluate.enable_sampling = True
   evaluate.enable_loss = False
   evaluate.num_samples = 1024
