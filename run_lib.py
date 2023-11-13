@@ -356,7 +356,22 @@ def evaluate(config,
         this_sample_dir = os.path.join(
           eval_dir, f"ckpt_{ckpt}")
         tf.io.gfile.makedirs(this_sample_dir)
-        samples, n = sampling_fn(score_model)
+
+        if config.eval.multi_model_sampling: 
+          mult = config.eval.multi
+          models = [score_model]
+          for other_config, other_state_path in zip(mult.model_configs, mult.state_paths): 
+            # Initialize other models
+            other_model = mutils.create_model(other_config)
+            other_optimizer = losses.get_optimizer(other_config, other_model.parameters())
+            other_ema = ExponentialMovingAverage(other_model.parameters(), decay=other_config.model.ema_rate)
+            other_state = dict(optimizer=other_optimizer, model=other_model, ema=other_ema, step=0)
+            other_state = restore_checkpoint(other_state_path, other_state, config.device)
+            other_ema.copy_to(other_model.parameters())
+            models.append(other_model)
+          samples, n = sampling_fn(models, mult.step_counts)
+        else: 
+          samples, n = sampling_fn(score_model)
         samples = np.clip(samples.permute(0, 2, 3, 1).cpu().numpy() * 255., 0, 255).astype(np.uint8)
         samples = samples.reshape(
           (-1, config.data.image_size, config.data.image_size, config.data.num_channels))

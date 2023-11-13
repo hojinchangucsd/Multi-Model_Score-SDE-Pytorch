@@ -116,7 +116,8 @@ def get_sampling_fn(config, sde, shape, inverse_scaler, eps):
                                  continuous=config.training.continuous,
                                  denoise=config.sampling.noise_removal,
                                  eps=eps,
-                                 device=config.device)
+                                 device=config.device,
+                                 multi=config.eval.multi_model_sampling)
   else:
     raise ValueError(f"Sampler name {sampler_name} unknown.")
 
@@ -354,7 +355,7 @@ def shared_corrector_update_fn(x, t, sde, model, corrector, continuous, snr, n_s
 
 def get_pc_sampler(sde, shape, predictor, corrector, inverse_scaler, snr,
                    n_steps=1, probability_flow=False, continuous=False,
-                   denoise=True, eps=1e-3, device='cuda'):
+                   denoise=True, eps=1e-3, device='cuda', multi=False):
   """Create a Predictor-Corrector (PC) sampler.
 
   Args:
@@ -370,6 +371,7 @@ def get_pc_sampler(sde, shape, predictor, corrector, inverse_scaler, snr,
     denoise: If `True`, add one-step denoising to the final samples.
     eps: A `float` number. The reverse-time SDE and ODE are integrated to `epsilon` to avoid numerical issues.
     device: PyTorch device.
+    multi: If `True`, multi-model version of pc sampler is returned. 
 
   Returns:
     A sampling function that returns samples and the number of function evaluations during sampling.
@@ -387,29 +389,60 @@ def get_pc_sampler(sde, shape, predictor, corrector, inverse_scaler, snr,
                                           snr=snr,
                                           n_steps=n_steps)
 
-  def pc_sampler(model):
-    """ The PC sampler funciton.
+  if not multi: 
+    def pc_sampler(model):
+      """ The PC sampler funciton.
 
-    Args:
-      model: A score model.
-    Returns:
-      Samples, number of function evaluations.
-    """
-    with torch.no_grad():
-      # Initial sample
-      x = sde.prior_sampling(shape).to(device)
-      timesteps = torch.linspace(sde.T, eps, sde.N, device=device)
+      Args:
+        model: A score model.
+      Returns:
+        Samples, number of function evaluations.
+      """
+      with torch.no_grad():
+        # Initial sample
+        x = sde.prior_sampling(shape).to(device)
+        timesteps = torch.linspace(sde.T, eps, sde.N, device=device)
 
-      for i in range(sde.N):
-        t = timesteps[i]
-        vec_t = torch.ones(shape[0], device=t.device) * t
-        x, x_mean = corrector_update_fn(x, vec_t, model=model)
-        x, x_mean = predictor_update_fn(x, vec_t, model=model)
-        print(f'Sampling step {i:04d} out of {sde.N}', flush=True, end='\r')
+        for i in range(sde.N):
+          t = timesteps[i]
+          vec_t = torch.ones(shape[0], device=t.device) * t
+          x, x_mean = corrector_update_fn(x, vec_t, model=model)
+          x, x_mean = predictor_update_fn(x, vec_t, model=model)
+          print(f'Sampling step {i:04d} out of {sde.N}', flush=True, end='\r')
 
-      return inverse_scaler(x_mean if denoise else x), sde.N * (n_steps + 1)
+        return inverse_scaler(x_mean if denoise else x), sde.N * (n_steps + 1)
 
-  return pc_sampler
+    return pc_sampler
+  
+  else: 
+    def multi_pc_sampler(models, step_counts): 
+      """ The multi-model PC sampler function.
+
+      Args:
+        models: Score models, in order of first-to-last in sampling time steps. (Assume identical sde)
+        step_counts: Number of steps each model takes. 
+      Returns:
+        Samples, number of function evaluations.
+      """
+      with torch.no_grad():
+        # Initial sample
+        x = sde.prior_sampling(shape).to(device)
+        timesteps = torch.linspace(sde.T, eps, sde.N, device=device)
+
+        i, n = 0, 0
+        for model, step_count in zip(models, step_counts): 
+          for s in range(i,i+step_count): 
+            t = timesteps[s]
+            vec_t = torch.ones(shape[0], device=t.device) * t
+            x, x_mean = corrector_update_fn(x, vec_t, model=model)
+            x, x_mean = predictor_update_fn(x, vec_t, model=model)
+            print(f'Sampling step {n:04d} out of {sde.N}', flush=True, end='\r')
+            n = n + 1
+          i = i + step_count
+
+        return inverse_scaler(x_mean if denoise else x), sde.N * (n_steps + 1)
+
+    return multi_pc_sampler
 
 
 def get_ode_sampler(sde, shape, inverse_scaler,

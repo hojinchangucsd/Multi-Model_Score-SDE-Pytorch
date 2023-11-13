@@ -1,4 +1,6 @@
 from configs.default_cifar10_configs import get_default_configs
+from configs.ve.cifar10_ncsnpp_continuous import get_config as get_63M
+from ml_collections import ConfigDict
 
 def get_config():
   config = get_default_configs()
@@ -24,6 +26,13 @@ def get_config():
   evaluate.enable_sampling = True
   evaluate.enable_loss = False
   evaluate.num_samples = 1024
+  evaluate.multi_model_sampling = True
+
+  # multi model sampling
+  mult = evaluate.multi = ConfigDict()
+  mult.model_configs = [get_63M()]
+  mult.state_paths = ['./assets/ve_cifar10_ncsnpp_continuous/checkpoint_24.pth']
+  mult.step_counts = [500, 500]
 
   # model
   model = config.model
