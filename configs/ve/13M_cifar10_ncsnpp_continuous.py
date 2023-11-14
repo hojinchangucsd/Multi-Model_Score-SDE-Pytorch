@@ -21,12 +21,12 @@ def get_config():
 
   # evaluation
   evaluate = config.eval
-  evaluate.begin_ckpt = 16
-  evaluate.end_ckpt = 16
+  evaluate.begin_ckpt = 21
+  evaluate.end_ckpt = 21
   evaluate.enable_sampling = True
   evaluate.enable_loss = False
   evaluate.num_samples = 1024
-  evaluate.multi_model_sampling = True
+  evaluate.multi_model_sampling = False
 
   # multi model sampling
   mult = evaluate.multi = ConfigDict()
