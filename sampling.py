@@ -429,15 +429,14 @@ def get_pc_sampler(sde, shape, predictor, corrector, inverse_scaler, snr,
         x = sde.prior_sampling(shape).to(device)
         timesteps = torch.linspace(sde.T, eps, sde.N, device=device)
 
-        i, n = 0, 0
-        for model, step_count in zip(models, step_counts): 
+        i = 0
+        for m, (model, step_count) in enumerate(zip(models, step_counts)): 
           for s in range(i,i+step_count): 
             t = timesteps[s]
             vec_t = torch.ones(shape[0], device=t.device) * t
             x, x_mean = corrector_update_fn(x, vec_t, model=model)
             x, x_mean = predictor_update_fn(x, vec_t, model=model)
-            print(f'Sampling step {n:04d} out of {sde.N}', flush=True, end='\r')
-            n = n + 1
+            print(f'Model {m}, Time Step {s:04d}, SDE.N={sde.N}', flush=True, end='\r')
           i = i + step_count
 
         return inverse_scaler(x_mean if denoise else x), sde.N * (n_steps + 1)
