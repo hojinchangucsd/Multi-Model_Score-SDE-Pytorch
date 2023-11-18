@@ -37,6 +37,7 @@ def get_default_configs():
   evaluate.enable_bpd = False
   evaluate.bpd_dataset = 'test'
   evaluate.multi_model_sampling = False
+  evaluate.enable_time = False
 
   # data
   config.data = data = ml_collections.ConfigDict()
