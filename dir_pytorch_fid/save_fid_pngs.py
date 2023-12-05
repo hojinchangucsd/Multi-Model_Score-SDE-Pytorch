@@ -41,8 +41,12 @@ def gen_pngs(fp):
         os.makedirs(samples_folder, exist_ok=True)
         
         num_samples = samples.shape[0]
+        print(f'{fp}samples_{npz_idx}.npz has {num_samples} samples')
         for k in range(num_samples): 
-            if img_idx+k >= SIZE: break
+            
+            if img_idx+k >= SIZE: 
+                print(f'{img_idx+k+1} samples processed')
+                break
 
             im = Image.fromarray(samples[k])
             im.save(f'{samples_folder}img_{img_idx+k}.png')
@@ -56,5 +60,5 @@ def gen_pngs(fp):
 
 
 
-fp = './exp/13M/workdir/mult_63M_750-250_eval_folder/ckpt_26/'
+fp = './exp/63M/workdir/mult_500L-500S_eval_folder/ckpt_24/'
 gen_pngs(fp)

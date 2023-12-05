@@ -25,7 +25,7 @@ def get_config():
   evaluate.end_ckpt = 26
   evaluate.enable_sampling = True
   evaluate.enable_loss = False
-  evaluate.batch_size = 1024
+  evaluate.batch_size = 2048
   evaluate.num_samples = 50000
   evaluate.multi_model_sampling = True
   evaluate.enable_time = False
@@ -33,7 +33,7 @@ def get_config():
   # multi model sampling
   mult = evaluate.multi = ConfigDict()
   mult.model_configs = [get_63M()]
-  mult.state_paths = ['./assets/ve_cifar10_ncsnpp_continuous/checkpoint_24.pth']
+  mult.state_paths = ['./assets/ve_cifar10_ncsnpp_continuous_63M/checkpoint_24.pth']
   mult.step_counts = [900,100]
 
   # model

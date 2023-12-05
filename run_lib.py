@@ -302,6 +302,18 @@ def evaluate(config,
         time.sleep(120)
         state = restore_checkpoint(ckpt_path, state, device=config.device)
     ema.copy_to(score_model.parameters())
+
+  # def get_model_size(): 
+  #   s = 0
+  #   for p in score_model.parameters(): 
+  #     if p.requires_grad is not True: continue
+  #     s += p.nelement()
+  # # for b in score_model.buffers(): 
+  # #   s += b.nelement()
+  #   return s
+  # print(get_model_size())
+  # quit()
+
     # Compute the loss function on the full evaluation dataset if loss computation is enabled
     if config.eval.enable_loss:
       all_losses = []
@@ -357,7 +369,7 @@ def evaluate(config,
         models = [score_model]
         for other_config, other_state_path in zip(mult.model_configs, mult.state_paths): 
           # Initialize other models
-          other_model = mutils.create_model(other_config)
+          other_model = mutils.create_model(other_config).cpu()
           other_optimizer = losses.get_optimizer(other_config, other_model.parameters())
           other_ema = ExponentialMovingAverage(other_model.parameters(), decay=other_config.model.ema_rate)
           other_state = dict(optimizer=other_optimizer, model=other_model, ema=other_ema, step=0)
@@ -365,6 +377,7 @@ def evaluate(config,
           other_ema.copy_to(other_model.parameters())
           models.append(other_model)
 
+      batch_times = []
       for r in range(num_sampling_rounds):
         logging.info("sampling -- ckpt: %d, round: %d" % (ckpt, r))
 
@@ -386,8 +399,7 @@ def evaluate(config,
         if config.eval.enable_time: 
           end.record()
           torch.cuda.synchronize() # Waits for everything to finish running
-          logging.info(f'Sampling one batch of {config.eval.batch_size:d} '+
-                       f'samples took {start.elapsed_time(end)/60000:.3f} minutes.')
+          batch_times.append(start.elapsed_time(end))
 
         samples = np.clip(samples.permute(0, 2, 3, 1).cpu().numpy() * 255., 0, 255).astype(np.uint8)
         samples = samples.reshape(
@@ -412,6 +424,10 @@ def evaluate(config,
         ###   np.savez_compressed(
         ###     io_buffer, pool_3=latents["pool_3"], logits=latents["logits"])
         ###   fout.write(io_buffer.getvalue())
+      
+      if config.eval.enable_time: 
+        batch_times = np.array(batch_times) / 1000.0 # ms -> s
+        logging.info(f'Median sample time of {num_sampling_rounds} batches of size {config.eval.batch_size}: {np.median(batch_times):.3f}s')
 
       ### # Compute inception scores, FIDs and KIDs.
       ### # Load all statistics that have been previously computed and saved for each host

@@ -25,8 +25,8 @@ def get_config():
   evaluate.end_ckpt = 26
   evaluate.enable_sampling = True
   evaluate.enable_loss = False
-  evaluate.batch_size = 1024
-  evaluate.num_samples = 3 * evaluate.batch_size
+  evaluate.batch_size = 1
+  evaluate.num_samples = 50 * evaluate.batch_size
   evaluate.multi_model_sampling = True
   evaluate.enable_time = True
 

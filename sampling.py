@@ -430,12 +430,16 @@ def get_pc_sampler(sde, shape, predictor, corrector, inverse_scaler, snr,
         Samples, number of function evaluations.
       """
       with torch.no_grad():
+
         # Initial sample
         x = sde.prior_sampling(shape).to(device)
         timesteps = torch.linspace(sde.T, eps, sde.N, device=device)
 
         i = 0
         for m, (model, step_count) in enumerate(zip(models, step_counts)): 
+          # Except for first model, other models are on cpu by default
+          model = model.to(device=device)
+
           for s in range(i,i+step_count): 
             t = timesteps[s]
             vec_t = torch.ones(shape[0], device=t.device) * t
@@ -443,6 +447,10 @@ def get_pc_sampler(sde, shape, predictor, corrector, inverse_scaler, snr,
             x, x_mean = predictor_update_fn(x, vec_t, model=model)
             print(f'Model {m}, Time Step {s:04d}, SDE.N={sde.N}', flush=True, end='\r')
           i = i + step_count
+
+          model = model.cpu() # Put model on cpu after use for less device usage
+        
+        models[0].to(device=device) # Put first model back on device
 
         return inverse_scaler(x_mean if denoise else x), sde.N * (n_steps + 1)
 
