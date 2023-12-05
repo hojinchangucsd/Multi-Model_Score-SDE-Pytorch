@@ -9,6 +9,9 @@ _pycache__/
 # # Tensorboard events
 # tensorboard/
 
+# assets
+assets/
+
 # VScode
 .vscode/
 
