@@ -23,6 +23,7 @@ import time
 
 import re
 import sys
+from copy import deepcopy
 
 import numpy as np
 import tensorflow as tf
@@ -65,7 +66,7 @@ def train(config, workdir):
   writer = tensorboard.SummaryWriter(tb_dir)
 
   # Initialize model.
-  score_model = mutils.create_model(config)#.half()
+  score_model = mutils.create_model(config)
   
   # def get_model_size(): 
   #   s = 0
@@ -144,7 +145,7 @@ def train(config, workdir):
 
   for step in range(initial_step, num_train_steps + 1):
     # Convert data to JAX arrays and normalize them. Use ._numpy() to avoid copy.
-    batch = torch.from_numpy(next(train_iter)['image']._numpy()).to(config.device).float()#.half()
+    batch = torch.from_numpy(next(train_iter)['image']._numpy()).to(config.device).float()
     batch = batch.permute(0, 3, 1, 2)
     batch = scaler(batch)
     # Execute one training step
@@ -159,7 +160,7 @@ def train(config, workdir):
 
     # Report the loss on an evaluation dataset periodically
     if step % config.training.eval_freq == 0:
-      eval_batch = torch.from_numpy(next(eval_iter)['image']._numpy()).to(config.device).float()#.half()
+      eval_batch = torch.from_numpy(next(eval_iter)['image']._numpy()).to(config.device).float()
       eval_batch = eval_batch.permute(0, 3, 1, 2)
       eval_batch = scaler(eval_batch)
       eval_loss = eval_step_fn(state, eval_batch)
@@ -191,6 +192,153 @@ def train(config, workdir):
             os.path.join(this_sample_dir, "sample.png"), "wb") as fout:
           save_image(image_grid, fout)
 
+def add_train(student_config, workdir):
+  """Runs the Adversarial Diffusion Distillation (ADD) training pipeline.
+
+  Args:
+    config: Configuration to use.
+    workdir: Working directory for checkpoints and TF summaries. If this
+      contains checkpoint training will be resumed from the latest checkpoint.
+  """
+
+  # Create directories for experimental logs
+  sample_dir = os.path.join(workdir, "samples")
+  tf.io.gfile.makedirs(sample_dir)
+
+  tb_dir = os.path.join(workdir, "tensorboard")
+  tf.io.gfile.makedirs(tb_dir)
+  writer = tensorboard.SummaryWriter(tb_dir)
+
+  # Initialize models
+  teacher_config = student_config.add_training.pretrained_config
+  teacher_path = student_config.add_trianing.pretrained_path
+  teacher_model = mutils.create_model(teacher_config)
+  student_model = mutils.create_model(student_config)
+  
+  ema = ExponentialMovingAverage(student_model.parameters(), decay=student_config.model.ema_rate)
+  optimizer = losses.get_optimizer(student_config, student_model.parameters())
+  student_state = dict(optimizer=optimizer, model=student_model, ema=ema, step=0)
+  teacher_state = dict(optimizer=None, model=teacher_model, ema=None, step=None)
+
+  # Create checkpoints directory
+  checkpoint_dir = os.path.join(workdir, "checkpoints")
+  # Intermediate checkpoints to resume training after pre-emption in cloud environments
+  checkpoint_meta_dir = os.path.join(workdir, "checkpoints-meta", "checkpoint.pth")
+  tf.io.gfile.makedirs(checkpoint_dir)
+  tf.io.gfile.makedirs(os.path.dirname(checkpoint_meta_dir))
+  if not tf.io.gfile.exists(checkpoint_meta_dir): 
+    # Student initialized to teacher weights
+    student_state = restore_checkpoint(teacher_path, student_state, student_config.device)
+  else: 
+    # Resume training when intermediate checkpoints are detected
+    student_state = restore_checkpoint(checkpoint_meta_dir, student_state, student_config.device)
+  teacher_state = restore_checkpoint(teacher_path, teacher_state, student_config.device)
+  initial_step = int(student_state['step'])
+
+  # Freeze teacher
+  for p in teacher_model.parameters(): p.requires_grad_(False)
+
+  # Build data iterators
+  train_ds, eval_ds, _ = datasets.get_dataset(student_config,
+                                              uniform_dequantization=student_config.data.uniform_dequantization)
+  train_iter = iter(train_ds)  # pytype: disable=wrong-arg-types
+  eval_iter = iter(eval_ds)  # pytype: disable=wrong-arg-types
+  # Create data normalizer and its inverse
+  scaler = datasets.get_data_scaler(student_config)
+  inverse_scaler = datasets.get_data_inverse_scaler(student_config)
+
+  # Setup SDEs
+  def get_sde(config): 
+    if config.training.sde.lower() == 'vpsde':
+      sde = sde_lib.VPSDE(beta_min=config.model.beta_min, beta_max=config.model.beta_max, N=config.model.num_scales)
+      sampling_eps = 1e-3
+    elif config.training.sde.lower() == 'subvpsde':
+      sde = sde_lib.subVPSDE(beta_min=config.model.beta_min, beta_max=config.model.beta_max, N=config.model.num_scales)
+      sampling_eps = 1e-3
+    elif config.training.sde.lower() == 'vesde':
+      sde = sde_lib.VESDE(sigma_min=config.model.sigma_min, sigma_max=config.model.sigma_max, 
+                          N=config.model.num_scales, timesteps=config.add_training.timesteps)
+      sampling_eps = 1e-5
+    else:
+      raise NotImplementedError(f"SDE {config.training.sde} unknown.")
+    return sde, sampling_eps
+
+  student_sde, student_sampling_eps = get_sde(student_config)
+  teacher_sde, teacher_sampling_eps = get_sde(teacher_config)
+
+  # Build one-step training and evaluation functions
+  optimize_fn = losses.optimization_manager(student_config)
+  continuous = student_config.training.continuous
+  reduce_mean = student_config.training.reduce_mean
+  likelihood_weighting = student_config.training.likelihood_weighting
+  train_step_fn = losses.get_step_fn(student_sde, train=True, optimize_fn=optimize_fn,
+                                     reduce_mean=reduce_mean, continuous=continuous,
+                                     likelihood_weighting=likelihood_weighting)
+  eval_step_fn = losses.get_step_fn(student_sde, train=False, optimize_fn=optimize_fn,
+                                    reduce_mean=reduce_mean, continuous=continuous,
+                                    likelihood_weighting=likelihood_weighting)
+
+  # Building sampling functions
+  def get_sampling_fn(config, sde, sampling_eps): 
+    sampling_shape = (config.training.batch_size, config.data.num_channels, config.data.image_size, config.data.image_size)
+    return sampling.get_sampling_fn(config, sde, sampling_shape, inverse_scaler, sampling_eps)
+  
+  student_sampling_fn = get_sampling_fn(student_config, student_sde, student_sampling_eps)
+  teacher_sampling_fn = get_sampling_fn(teacher_config, teacher_sde, teacher_sampling_eps)
+
+  num_train_steps = student_config.training.n_iters
+
+  # In case there are multiple hosts (e.g., TPU pods), only log to host 0
+  logging.info("Starting training loop at step %d." % (initial_step,))
+
+  for step in range(initial_step, num_train_steps + 1):
+    # Convert data to JAX arrays and normalize them. Use ._numpy() to avoid copy.
+    batch = torch.from_numpy(next(train_iter)['image']._numpy()).to(student_config.device).float()
+    batch = batch.permute(0, 3, 1, 2)
+    batch = scaler(batch)
+    # Execute one training step
+    loss = train_step_fn(student_state, batch)
+    if step % student_config.training.log_freq == 0:
+      logging.info("step: %d, training_loss: %.5e" % (step, loss.item()))
+      writer.add_scalar("training_loss", loss, step)
+
+    # Save a temporary checkpoint to resume training after pre-emption periodically
+    if step != 0 and step % student_config.training.snapshot_freq_for_preemption == 0:
+      save_checkpoint(checkpoint_meta_dir, student_state)
+
+    # Report the loss on an evaluation dataset periodically
+    if step % student_config.training.eval_freq == 0:
+      eval_batch = torch.from_numpy(next(eval_iter)['image']._numpy()).to(student_config.device).float()
+      eval_batch = eval_batch.permute(0, 3, 1, 2)
+      eval_batch = scaler(eval_batch)
+      eval_loss = eval_step_fn(student_state, eval_batch)
+      logging.info("step: %d, eval_loss: %.5e" % (step, eval_loss.item()))
+      writer.add_scalar("eval_loss", eval_loss.item(), step)
+
+    # Save a checkpoint periodically and generate samples if needed
+    if step != 0 and step % student_config.training.snapshot_freq == 0 or step == num_train_steps:
+      # Save the checkpoint.
+      save_step = step // student_config.training.snapshot_freq
+      save_checkpoint(os.path.join(checkpoint_dir, f'checkpoint_{save_step}.pth'), student_state)
+
+      # Generate and save samples
+      if student_config.training.snapshot_sampling:
+        ema.store(student_model.parameters())
+        ema.copy_to(student_model.parameters())
+        sample, n = student_sampling_fn(student_model)
+        ema.restore(student_model.parameters())
+        this_sample_dir = os.path.join(sample_dir, "iter_{}".format(step))
+        tf.io.gfile.makedirs(this_sample_dir)
+        nrow = int(np.sqrt(sample.shape[0]))
+        image_grid = make_grid(sample, nrow, padding=2)
+        sample = np.clip(sample.permute(0, 2, 3, 1).cpu().numpy() * 255, 0, 255).astype(np.uint8)
+        with tf.io.gfile.GFile(
+            os.path.join(this_sample_dir, "sample.np"), "wb") as fout:
+          np.save(fout, sample)
+
+        with tf.io.gfile.GFile(
+            os.path.join(this_sample_dir, "sample.png"), "wb") as fout:
+          save_image(image_grid, fout)
 
 def evaluate(config,
              workdir,
@@ -319,7 +467,7 @@ def evaluate(config,
       all_losses = []
       eval_iter = iter(eval_ds)  # pytype: disable=wrong-arg-types
       for i, batch in enumerate(eval_iter):
-        eval_batch = torch.from_numpy(batch['image']._numpy()).to(config.device).float()#.half()
+        eval_batch = torch.from_numpy(batch['image']._numpy()).to(config.device).float()
         eval_batch = eval_batch.permute(0, 3, 1, 2)
         eval_batch = scaler(eval_batch)
         eval_loss = eval_step(state, eval_batch)
@@ -341,7 +489,7 @@ def evaluate(config,
         bpd_iter = iter(ds_bpd)  # pytype: disable=wrong-arg-types
         for batch_id in range(len(ds_bpd)):
           batch = next(bpd_iter)
-          eval_batch = torch.from_numpy(batch['image']._numpy()).to(config.device).float()#.half()
+          eval_batch = torch.from_numpy(batch['image']._numpy()).to(config.device).float()
           eval_batch = eval_batch.permute(0, 3, 1, 2)
           eval_batch = scaler(eval_batch)
           bpd = likelihood_fn(score_model, eval_batch)[0]

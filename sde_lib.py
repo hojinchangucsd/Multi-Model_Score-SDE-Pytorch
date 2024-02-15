@@ -205,18 +205,27 @@ class subVPSDE(SDE):
 
 
 class VESDE(SDE):
-  def __init__(self, sigma_min=0.01, sigma_max=50, N=1000):
+  def __init__(self, sigma_min=0.01, sigma_max=50, N=1000, timesteps=None):
     """Construct a Variance Exploding SDE.
 
     Args:
       sigma_min: smallest sigma.
       sigma_max: largest sigma.
       N: number of discretization steps
+      timesteps: if not None, overrides N by using the provided list of discretized timesteps. 
+                 The list has to be nonnegative integers in strictly increasing order. 
     """
     super().__init__(N)
     self.sigma_min = sigma_min
     self.sigma_max = sigma_max
-    self.discrete_sigmas = torch.exp(torch.linspace(np.log(self.sigma_min), np.log(self.sigma_max), N))
+    if timesteps is None: 
+      self.discrete_sigmas = torch.exp(torch.linspace(np.log(self.sigma_min), np.log(self.sigma_max), N))
+    else: 
+      timesteps = torch.tensor(timesteps)
+      tmax, tmin = timesteps.max(), timesteps.min()
+      timesteps = (timesteps-tmin)/(tmax-tmin)
+      lsmax, lsmin = np.log(self.sigma_max), np.log(self.sigma_min)
+      self.discrete_sigmas = torch.exp(timesteps*(lsmax-lsmin)+lsmin)
     self.N = N
 
   @property

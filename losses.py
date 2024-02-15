@@ -148,6 +148,79 @@ def get_ddpm_loss_fn(vpsde, train, reduce_mean=True):
 
   return loss_fn
 
+def add_loss_fn(vesde, train, reduce_mean=True): 
+  # Previous SMLD models assume descending sigmas
+  smld_sigma_array = torch.flip(vesde.discrete_sigmas, dims=(0,))
+  reduce_op = torch.mean if reduce_mean else lambda *args, **kwargs: 0.5 * torch.sum(*args, **kwargs)
+
+  '''
+  student_sampling_fn: ODE sampler
+  teacher_sampling_fn: PC sampler most likely
+  '''
+  def loss_fn(student_model, teacher_model, student_sampling_fn, teacher_sampling_fn, batch):
+    model_fn = mutils.get_model_fn(student_model, train=train)
+    labels = torch.randint(0, vesde.N, (batch.shape[0],), device=batch.device)
+    sigmas = smld_sigma_array.to(batch.device)[labels]
+    noise = torch.randn_like(batch) * sigmas[:, None, None, None]
+    perturbed_data = noise + batch
+    score = model_fn(perturbed_data, labels)
+    target = -noise / (sigmas ** 2)[:, None, None, None]
+    losses = torch.square(score - target)
+    losses = reduce_op(losses.reshape(losses.shape[0], -1), dim=-1) * sigmas ** 2
+    loss = torch.mean(losses)
+    return loss
+
+  return loss_fn
+
+def get_add_step_fn(sde, train, optimize_fn=None, reduce_mean=False):
+  """Create a one-step ADD training/evaluation function.
+
+  Args:
+    optimize_fn: An optimization function.
+    reduce_mean: If `True`, average the loss across data dimensions. Otherwise sum the loss across data dimensions.
+
+  Returns:
+    A one-step function for training or evaluation.
+  """
+
+  loss_fn = add_loss_fn(sde, train=train, reduce_mean=reduce_mean)
+
+  def add_step_fn(student_state, teacher_model, student_sampling_fn, teacher_sampling_fn, batch):
+    """Running one step of training or evaluation.
+
+    This function will undergo `jax.lax.scan` so that multiple steps can be pmapped and jit-compiled together
+    for faster execution.
+
+    Args:
+      student_state: A dictionary of training information, containing the student model, optimizer,
+       EMA status, and number of optimization steps.
+      teacher_model: Frozen teacher model
+      batch: A mini-batch of training/evaluation data.
+
+    Returns:
+      loss: The average loss value of this state.
+    """
+    student_model = student_state['model']
+    if train:
+      optimizer = student_state['optimizer']
+      optimizer.zero_grad()
+      loss = loss_fn(student_model, teacher_model, student_sampling_fn, teacher_sampling_fn, batch)
+      loss.backward()
+      optimize_fn(optimizer, student_model.parameters(), step=student_state['step'])
+      student_state['step'] += 1
+      student_state['ema'].update(student_model.parameters())
+    else:
+      with torch.no_grad():
+        ema = student_state['ema']
+        ema.store(student_model.parameters())
+        ema.copy_to(student_model.parameters())
+        loss = loss_fn(student_model, batch)
+        ema.restore(student_model.parameters())
+
+    return loss
+
+  return add_step_fn
+
 
 def get_step_fn(sde, train, optimize_fn=None, reduce_mean=False, continuous=True, likelihood_weighting=False):
   """Create a one-step training/evaluation function.
